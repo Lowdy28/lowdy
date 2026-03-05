@@ -6,14 +6,26 @@
 
 // Composables
 import { createRouter, createWebHistory } from 'vue-router'
-import { routes } from 'vue-router/auto-routes'
+import { routes as autoRoutes } from 'vue-router/auto-routes'
+// @ts-ignore
+import ProductosView from "@/views/ProductosView.vue";
+
+// Combinamos las rutas automáticas con tu ruta manual
+const routes = [
+  ...autoRoutes,
+  {
+    path: "/productos",
+    name: "productos",
+    component: ProductosView
+  }
+]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
-// Workaround for https://github.com/vitejs/vite/issues/11804
+// Workaround para errores de importación dinámica (Vite)
 router.onError((err, to) => {
   if (err?.message?.includes?.('Failed to fetch dynamically imported module')) {
     if (localStorage.getItem('vuetify:dynamic-reload')) {
