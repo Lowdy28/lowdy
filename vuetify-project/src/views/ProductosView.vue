@@ -1,74 +1,75 @@
 <template>
   <v-container>
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000" location="top right">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="snackbar.show = false">Cerrar</v-btn>
+      </template>
+    </v-snackbar>
 
-    <v-card>
-      <v-card-title>
-        Lista de Productos
+    <v-card elevation="4" class="rounded-lg">
+      <v-toolbar color="primary" dark>
+        <v-toolbar-title class="font-weight-bold">
+          <v-icon icon="mdi-package-variant-closed" class="mr-2"></v-icon>
+          Gestión de Productos
+        </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn color="primary" @click="abrirDialogo">
+        <v-btn prepend-icon="mdi-plus" variant="elevated" color="white" @click="abrirDialogo">
           Nuevo Producto
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
 
-      <v-table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Código</th>
-            <th>Nombre</th>
-            <th>Precio</th>
-            <th>% Impuesto</th>
-            <th>Precio Final</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
+      <v-data-table
+        :headers="headers"
+        :items="productos"
+        hover
+        no-data-text="No hay productos disponibles"
+      >
+        <template v-slot:item.precio_final="{ item }">
+          <v-chip color="success" font-weight="bold">
+            ${{ Number(item.precio_final).toFixed(2) }}
+          </v-chip>
+        </template>
 
-        <tbody>
-          <tr v-for="producto in productos" :key="producto.id">
-            <td>{{ producto.id }}</td>
-            <td>{{ producto.codigo }}</td>
-            <td>{{ producto.nombre }}</td>
-            <td>{{ producto.precio }}</td>
-            <td>{{ producto.impuesto }}</td>
-            <td>{{ producto.precio_final }}</td>
-            <td>
-              <v-btn size="small" color="blue" @click="editar(producto)">
-                Editar
-              </v-btn>
-
-              <v-btn size="small" color="red" @click="eliminar(producto.id)">
-                Eliminar
-              </v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
+        <template v-slot:item.acciones="{ item }">
+          <v-btn icon="mdi-pencil" variant="text" color="blue" @click="editar(item)"></v-btn>
+          <v-btn icon="mdi-delete" variant="text" color="red" @click="confirmarEliminar(item)"></v-btn>
+        </template>
+      </v-data-table>
     </v-card>
 
-    <!-- MODAL -->
-    <v-dialog v-model="dialog" max-width="500px">
-      <v-card>
-        <v-card-title>
-          {{ editando ? "Editar Producto" : "Nuevo Producto" }}
+    <v-dialog v-model="dialog" max-width="500px" persistent>
+      <v-card class="rounded-xl">
+        <v-card-title class="bg-grey-lighten-3 py-4">
+          <span class="text-h5">{{ editando ? "Editar Producto" : "Nuevo Producto" }}</span>
         </v-card-title>
 
-        <v-card-text>
-          <v-text-field v-model="form.codigo" label="Código"></v-text-field>
-          <v-text-field v-model="form.nombre" label="Nombre"></v-text-field>
-          <v-text-field v-model="form.precio" label="Precio" type="number"></v-text-field>
-          <v-text-field v-model="form.impuesto" label="% Impuesto" type="number"></v-text-field>
+        <v-card-text class="pt-4">
+          <v-row dense>
+            <v-col cols="12">
+              <v-text-field v-model="form.codigo" label="Código" variant="outlined" prepend-inner-icon="mdi-barcode"></v-text-field>
+            </v-col>
+            <v-col cols="12">
+              <v-text-field v-model="form.nombre" label="Nombre del Producto" variant="outlined" prepend-inner-icon="mdi-format-title"></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="form.precio" label="Precio" type="number" variant="outlined" prefix="$"></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="form.impuesto" label="% Impuesto" type="number" variant="outlined" suffix="%"></v-text-field>
+            </v-col>
+          </v-row>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="guardar">
-            Guardar
+          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-btn color="primary" variant="elevated" @click="guardar" :loading="cargando">
+            {{ editando ? "Actualizar" : "Guardar Producto" }}
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
@@ -76,19 +77,27 @@
 import productoService from "@/services/productoService";
 
 export default {
-
   data() {
     return {
       productos: [],
       dialog: false,
       editando: false,
-      form: {
-        id: null,
-        codigo: "",
-        nombre: "",
-        precio: 0,
-        impuesto: 0
-      }
+      cargando: false,
+      // Configuración de la alarma (Snackbar)
+      snackbar: {
+        show: false,
+        text: "",
+        color: "success"
+      },
+      headers: [
+        { title: 'Código', key: 'codigo' },
+        { title: 'Nombre', key: 'nombre' },
+        { title: 'Precio', key: 'precio' },
+        { title: 'Impuesto %', key: 'impuesto' },
+        { title: 'Total', key: 'precio_final' },
+        { title: 'Acciones', key: 'acciones', sortable: false },
+      ],
+      form: { id: null, codigo: "", nombre: "", precio: 0, impuesto: 0 }
     };
   },
 
@@ -97,23 +106,21 @@ export default {
   },
 
   methods: {
+    mostrarAlerta(mensaje, color = "success") {
+      this.snackbar.text = mensaje;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
+    },
 
     obtenerProductos() {
-      productoService.getProductos()
-        .then(res => {
-          this.productos = res.data;
-        });
+      productoService.getProductos().then(res => {
+        this.productos = res.data;
+      });
     },
 
     abrirDialogo() {
       this.editando = false;
-      this.form = {
-        id: null,
-        codigo: "",
-        nombre: "",
-        precio: 0,
-        impuesto: 0
-      };
+      this.form = { id: null, codigo: "", nombre: "", precio: 0, impuesto: 0 };
       this.dialog = true;
     },
 
@@ -123,30 +130,33 @@ export default {
       this.dialog = true;
     },
 
-    guardar() {
-      if (this.editando) {
-        productoService.actualizarProducto(this.form.id, this.form)
-          .then(() => {
-            this.obtenerProductos();
-            this.dialog = false;
-          });
-      } else {
-        productoService.crearProducto(this.form)
-          .then(() => {
-            this.obtenerProductos();
-            this.dialog = false;
-          });
+    async guardar() {
+      this.cargando = true;
+      try {
+        if (this.editando) {
+          await productoService.actualizarProducto(this.form.id, this.form);
+          this.mostrarAlerta("¡Producto actualizado con éxito!");
+        } else {
+          await productoService.crearProducto(this.form);
+          this.mostrarAlerta("¡Producto registrado correctamente!");
+        }
+        this.obtenerProductos();
+        this.dialog = false;
+      } catch (error) {
+        this.mostrarAlerta("Error al procesar la solicitud", "error");
+      } finally {
+        this.cargando = false;
       }
     },
 
-    eliminar(id) {
-      productoService.eliminarProducto(id)
-        .then(() => {
+    confirmarEliminar(item) {
+      if (confirm(`¿Estás seguro de eliminar ${item.nombre}?`)) {
+        productoService.eliminarProducto(item.id).then(() => {
+          this.mostrarAlerta("Producto eliminado", "black");
           this.obtenerProductos();
         });
+      }
     }
-
   }
-
 };
 </script>
