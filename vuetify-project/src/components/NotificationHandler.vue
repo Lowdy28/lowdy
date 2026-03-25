@@ -43,6 +43,13 @@ onMounted(async () => {
       body: payload.notification?.body || ''
     }
     showSnackbar.value = true
+      new Notification(
+    payload.notification?.title || 'Nueva notificación',
+    {
+      body: payload.notification?.body,
+      icon: '/pwa-192x192.png'
+    }
+  )
   })
 })
 </script>

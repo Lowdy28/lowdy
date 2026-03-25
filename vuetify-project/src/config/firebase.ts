@@ -15,10 +15,10 @@ const messaging = getMessaging(app)
 
 const VAPID_KEY = 'BJtGNnGZJvGnPw6hwPzgQdElAwGo93LNzkrdpmBQN9YoPhQZPL7vxSWaoR1oMJNGAZXM6DrOWUxm93kfbygNicM'
 
-// Solicita permiso y obtiene el token FCM del dispositivo
 export const requestNotificationPermission = async (): Promise<string | null> => {
   try {
     const permission = await Notification.requestPermission()
+
     if (permission !== 'granted') {
       console.warn('Permiso de notificaciones denegado')
       return null
@@ -27,13 +27,14 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     const token = await getToken(messaging, { vapidKey: VAPID_KEY })
     console.log('Token FCM:', token)
     return token
+
   } catch (error) {
     console.error('Error obteniendo token FCM:', error)
     return null
   }
 }
 
-// Escucha notificaciones cuando la app está en primer plano (tab activa)
+// 👇 ESTA PARTE ES LA QUE FALTA
 export const onForegroundMessage = (callback: (payload: any) => void) => {
   return onMessage(messaging, callback)
 }
