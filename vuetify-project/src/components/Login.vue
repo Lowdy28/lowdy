@@ -1,6 +1,20 @@
 <template>
   <v-container class="fill-height d-flex align-center justify-center">
     
+    <!-- Mensaje de Sin Conexión -->
+    <v-alert
+      v-if="isOffline"
+      type="warning"
+      variant="tonal"
+      density="compact"
+      icon="mdi-wifi-off"
+      class="offline-banner"
+      prominent
+    >
+      <v-alert-title>Sin conexión a internet</v-alert-title>
+      No es posible conectarse al servidor. Verifica tu conexión e intenta de nuevo.
+    </v-alert>
+
     <v-card 
       elevation="8" 
       width="100%" 
@@ -55,6 +69,7 @@
 
           <v-btn
             :loading="isLoading"
+            :disabled="isOffline"
             class="mt-6 text-none font-weight-bold"
             color="primary"
             size="large"
@@ -64,7 +79,7 @@
             elevation="2"
           >
             <v-icon left class="mr-2">mdi-login</v-icon>
-            Iniciar sesión
+            {{ isOffline ? 'Sin conexión' : 'Iniciar sesión' }}
           </v-btn>
         </v-form>
       </v-card-text>
@@ -74,8 +89,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import axios from '../config/axios' // Asegúrate que esta ruta sea correcta en tu proyecto
+import { ref, onMounted, onUnmounted } from 'vue'
+import axios from '../config/axios'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -86,13 +101,43 @@ const alertMessage = ref('')
 const isLoading = ref(false)
 const passwordVisible = ref(false)
 
+// ── Detección de conexión ──────────────────────────────────────────────────
+const isOffline = ref(!navigator.onLine)
+
+const handleOnline = () => {
+  isOffline.value = false
+  alertMessage.value = '' // Limpia errores previos al recuperar conexión
+}
+
+const handleOffline = () => {
+  isOffline.value = true
+}
+
+// Escuchar cambios de conectividad mientras el componente está activo
+onMounted(() => {
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
+})
+// ──────────────────────────────────────────────────────────────────────────
+
 const validationRules = [
   value => !!value || 'Campo requerido'
 ]
 
-// Esta es TU lógica exacta, con tus console.logs
 const handleLogin = async() => {
   alertMessage.value = ''
+
+  // Si no hay conexión, mostrar mensaje y no intentar la petición
+  if (isOffline.value) {
+    alertMessage.value = 'No hay conexión a internet. No es posible conectarse al servidor.'
+    return
+  }
+
   isLoading.value = true
   
   try {
@@ -101,18 +146,15 @@ const handleLogin = async() => {
       return
     }
     
-    // Petición exacta
     const response = await axios.post('/login', {
       email: userEmail.value,
       password: userPassword.value
     })
 
-    // TUS LOGS (no los borré esta vez)
     console.log('Respuesta completa:', response.data)
     console.log('Valor de acceso:', response.data.acceso)
     console.log('Tipo de acceso:', typeof response.data.acceso)
     
-    // Tu validación exacta
     if (response.data.acceso && response.data.token) {
       localStorage.setItem('token', response.data.token)
       await router.push('/home')
@@ -122,7 +164,14 @@ const handleLogin = async() => {
       
   } catch(error) {
     console.error('Error en login:', error)
-    alertMessage.value = "Ocurrió un error al conectarse con el servidor"
+
+    // Distinguir si el error fue por falta de conexión
+    if (!navigator.onLine || error.code === 'ERR_NETWORK') {
+      isOffline.value = true
+      alertMessage.value = 'No hay conexión a internet. No es posible conectarse al servidor.'
+    } else {
+      alertMessage.value = 'Ocurrió un error al conectarse con el servidor'
+    }
   } finally {
     isLoading.value = false
   }
@@ -130,10 +179,19 @@ const handleLogin = async() => {
 </script>
 
 <style scoped>
-/* Tu estilo de fondo original */
 :global(body) {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  height: 100vh; /* Asegura que cubra toda la pantalla */
+  height: 100vh;
   margin: 0;
+}
+
+.offline-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: 90%;
+  max-width: 500px;
 }
 </style>

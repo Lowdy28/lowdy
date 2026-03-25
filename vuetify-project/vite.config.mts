@@ -42,6 +42,47 @@ export default defineConfig({
           }
         ]
       },
+      // ── Estrategias de cacheo con Workbox ──────────────────────────────────
+      workbox: {
+        // Cachea automáticamente los archivos generados por Vite (JS, CSS, HTML)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+
+        runtimeCaching: [
+          // Estrategia: Cache First para fuentes de Google
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 año
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          // Estrategia: Network First para llamadas a la API
+          // Intenta la red primero; si falla (offline) usa la caché
+          {
+            urlPattern: /^http:\/\/127\.0\.0\.1:8000\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 5, // Si la red tarda más de 5s, usa caché
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60, // 1 hora
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
+      },
+      // ──────────────────────────────────────────────────────────────────────
       devOptions: {
         enabled: true,
         type: 'module'// Permite probar la PWA mientras desarrollas

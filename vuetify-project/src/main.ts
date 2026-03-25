@@ -19,8 +19,18 @@ import { createApp } from 'vue'
 // Styles
 import 'unfonts.css'
 
-// Activación inmediata del Service Worker
-registerSW({ immediate: true })
+// Registro del Service Worker con recarga automática al haber actualización
+registerSW({
+  immediate: true,
+  onOfflineReady() {
+    // El SW ya tiene los recursos cacheados: la app puede funcionar offline
+    console.log('PWA lista para uso offline')
+  },
+  onNeedRefresh() {
+    // Hay una nueva versión disponible, se actualiza automáticamente
+    console.log('Nueva versión disponible, actualizando...')
+  }
+})
 
 const app = createApp(App)
 
