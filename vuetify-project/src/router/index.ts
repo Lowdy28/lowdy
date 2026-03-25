@@ -6,6 +6,7 @@
 
 // Composables
 import { createRouter, createWebHistory } from 'vue-router'
+// @ts-ignore
 import { routes as autoRoutes } from 'vue-router/auto-routes'
 // @ts-ignore
 import ProductosView from "@/views/ProductosView.vue";
